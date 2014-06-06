@@ -1,0 +1,10 @@
+{
+  "name": "<%= _.slugify(name) %>",
+  "description": "<%= desc %>",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/<%= user %>/<%= _.slugify(name) %>.git"
+  },
+  "version": "0.0.1",
+  "dependencies": {}
+}

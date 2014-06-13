@@ -8,21 +8,45 @@ var util = require('util'),
     req = require('request'),
     cheerio = require('cheerio'),
     exec = require('child_process').exec,
+    async = require('async'),
     prefix = '\t  ',
     impactTempDir = '_impactjs',
-    ppTempDir = '_plusplus';
+    ppTempDir = '_plusplus',
+    self;
 
 fs.rm = require('rimraf');
+
+function directoryAsync (src, dest, cb) {
+  //console.log('directory ' + src);
+  self.directory(src, dest);
+  self.conflicter.resolve(cb);
+}
+
+function copyAsync(src, dest, cb) {
+  //console.log('copy ' + src);
+  self.directory(src, dest);
+  self.conflicter.resolve(cb);
+}
 
 var ImpactplusplusGenerator = yeoman.generators.Base.extend({
 
   init: function () {
+
+    self = this;
+
     this.pkg = require('../package.json');
 
     this.on('end', function () {
+      
       if (!this.options['skip-install']) {
-        this.installDependencies();
+        this.installDependencies({
+          callback: function() {
+            self.log('Finished. Now you can...');
+            self.log('* run "grunt" to start a web server to run the game.');
+          }
+        });
       }
+
     });
   },
 
@@ -50,7 +74,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     },{
       type: 'input',
       name: 'impactKey',
-      message: 'What is your ImpactJS license key?'
+      message: 'What is your impactjs license key?'
     }];
 
     this.prompt(prompts, function (props) {
@@ -66,11 +90,10 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
 
   impactjs: function() {
 
-    this.log('download impactjs...');
+    this.log('downloading impactjs...');
 
     var done = this.async(),
-        host = 'http://impactjs.com',
-        self = this;
+        host = 'http://impactjs.com';
 
     req.post(host + '/download', {form: {key: this.impactKey}}, function(err1, resp1, body1) {
       req.get(host + resp1.headers.location, function(err2, resp2, body2) {
@@ -78,28 +101,23 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
         if (fs.existsSync(impactTempDir)) fs.rm.sync(impactTempDir);
 
         var $ = cheerio.load(body2),
-            gitCmd = $('[value^="git clone"]').val();
+            gitCmd = $('[value^="git clone"]').val(),
+            srcPath = self.destinationRoot() + '/' + impactTempDir;
 
-        self.log('found link cloning repo...')
+        gitCmd += ' ' + srcPath;
 
-        // self.log(self.sourceRoot());
-        // self.log(self.destinationRoot());
-
-        gitCmd += ' ' + self.destinationRoot() + '/' + impactTempDir;
-        self.log(gitCmd);
         exec(gitCmd, function(err, stdout, stderr) {
 
-          self.log('cloned repo. copying files...')
-
-          //self.log(self.sourceRoot());
-          //self.log(self.destinationRoot());
-          
-          self.directory(self.destinationRoot() + '/' + impactTempDir + '/lib', self.destinationRoot() + '/lib');
-          self.directory(self.destinationRoot() + '/' + impactTempDir + '/media', self.destinationRoot() + '/media');
-          self.directory(self.destinationRoot() + '/' + impactTempDir + '/tools', self.destinationRoot() + '/tools');
-          self.copy(self.destinationRoot() + '/' + impactTempDir + '/weltmeister.html', self.destinationRoot() + '/weltmeister.html');
-
-          done();
+          async.series([
+            function(cb) { directoryAsync(srcPath + '/lib', self.destinationRoot() + '/lib', cb); },
+            function(cb) { directoryAsync(srcPath + '/media', self.destinationRoot() + '/media', cb); },
+            function(cb) { directoryAsync(srcPath + '/tools', self.destinationRoot() + '/tools', cb); },
+            function(cb) { copyAsync(srcPath + '/weltmeister.html', self.destinationRoot() + '/weltmeister.html', cb); }
+          ], 
+          function(err) {
+            console.log('async done');
+            fs.rm(impactTempDir, done);
+          });
 
         });
       });
@@ -112,14 +130,16 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     this.log('download impact++');
 
     var gitCmd = 'git clone -b dev https://github.com/collinhover/impactplusplus.git ' + ppTempDir,
+        src = self.destinationRoot() + '/' + ppTempDir + '/lib',
+        dest = self.destinationRoot() + '/lib',
         done = this.async();
 
     if (fs.existsSync(ppTempDir)) fs.rm.sync(ppTempDir);
 
-    var self = this;
     exec(gitCmd, function(err, stdout, stderr) {
-      self.directory(self.destinationRoot() + '/' + ppTempDir + '/lib', self.destinationRoot() + '/lib');
-      done();
+      directoryAsync(src, dest, function() {
+        fs.rm(ppTempDir, done);
+      });
     });
     
   },
@@ -137,10 +157,8 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     this.template('_readme.md', 'readme.md');
     this.template('_index.html','index.html');
     
+    this.copy('Gruntfile.js', 'Gruntfile.js');
     this.copy('style.css', 'style.css');
-
-    fs.rm.sync(impactTempDir);
-    fs.rm.sync(ppTempDir);
 
   },
 
@@ -148,6 +166,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     this.copy('editorconfig', '.editorconfig');
     this.copy('jshintrc', '.jshintrc');
   }
+
 });
 
 module.exports = ImpactplusplusGenerator;

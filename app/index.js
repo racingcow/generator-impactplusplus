@@ -75,6 +75,12 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       type: 'input',
       name: 'impactKey',
       message: 'What is your impactjs license key?'
+    },{
+      type: 'list',
+      name: 'sample',
+      message: 'Start with which sample?',
+      choices: ['blank', 'jumpnrun', 'supercollider'],
+      default: 'blank'
     }];
 
     this.prompt(prompts, function (props) {
@@ -83,6 +89,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       this.desc = props.desc;
       this.user = props.user;
       this.impactKey = props.impactKey;
+      this.sample = props.sample;
 
       done();
     }.bind(this));
@@ -125,6 +132,15 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
 
   },
 
+  blank: function() {
+
+    this.log('copying base files');
+
+    self.directory('lib', 'lib');
+    self.copy('style.css', 'style.css');
+    self.template('_index.html','index.html');
+  },
+
   plusplus: function() {
 
     this.log('download impact++');
@@ -132,40 +148,47 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     var gitCmd = 'git clone -b dev https://github.com/collinhover/impactplusplus.git ' + ppTempDir,
         src = self.destinationRoot() + '/' + ppTempDir + '/lib',
         dest = self.destinationRoot() + '/lib',
+        exSrc = self.destinationRoot() + '/' + ppTempDir + '/examples',
+        exDest = self.destinationRoot(),
         done = this.async();
 
     if (fs.existsSync(ppTempDir)) fs.rm.sync(ppTempDir);
 
     exec(gitCmd, function(err, stdout, stderr) {
       directoryAsync(src, dest, function() {
-        fs.rm(ppTempDir, done);
+        if (self.sample != 'blank') {
+          self.log('copying sample "' + self.sample + '"');
+          self.log(exSrc + '/' + self.sample + ' to ' + exDest);
+          directoryAsync(exSrc + '/' + self.sample, exDest, function() {
+            fs.rm(ppTempDir, done);
+          });
+        }
+        else {
+          fs.rm(ppTempDir, done);
+        }
       });
     });
     
   },
 
   app: function () {
-    
-    this.directory('lib', 'lib');
-    this.mkdir('lib/game/levels');
-    this.mkdir('lib/impact');
-    this.mkdir('lib/weltmeister');
-    this.mkdir('media');
 
-    this.template('_package.json', 'package.json');
-    this.template('_bower.json', 'bower.json');
-    this.template('_readme.md', 'readme.md');
-    this.template('_index.html','index.html');
-    
-    this.copy('Gruntfile.js', 'Gruntfile.js');
-    this.copy('style.css', 'style.css');
+    self.template('_package.json', 'package.json');
+    self.template('_bower.json', 'bower.json');
+    self.template('_readme.md', 'readme.md');
+    self.copy('Gruntfile.js', 'Gruntfile.js');
 
-  },
+    self.copy('editorconfig', '.editorconfig');
+    self.copy('jshintrc', '.jshintrc');
 
-  projectfiles: function () {
-    this.copy('editorconfig', '.editorconfig');
-    this.copy('jshintrc', '.jshintrc');
   }
+
+  // makeFolders: function() {
+  //   self.mkdir('lib/game/levels');
+  //   self.mkdir('lib/impact');
+  //   self.mkdir('lib/weltmeister');
+  //   self.mkdir('media');
+  // },
 
 });
 

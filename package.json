@@ -1,7 +1,7 @@
 {
   "name": "generator-impactplusplus",
-  "version": "0.0.0",
-  "description": "Yeoman generator",
+  "version": "0.0.1",
+  "description": "Yeoman generator that scaffolds out an impactplusplus game",
   "license": "MIT",
   "main": "app/index.js",
   "repository": "racingcow/generator-impactplusplus",

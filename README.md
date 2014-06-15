@@ -1,6 +1,6 @@
 # generator-impactplusplus
 
-> [Yeoman](http://yeoman.io) generator that scaffolds out an impact++ game
+> [Yeoman](http://yeoman.io) generator that scaffolds out an [impact++](http://collinhover.github.io/impactplusplus/) game
 
 
 ## Getting Started

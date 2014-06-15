@@ -9,27 +9,38 @@
     require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
     grunt.initConfig({
-      express: {
-        all: {
-          options: {
-            port: 9000,
-            hostname: '*',
-            bases: [path.resolve('.')]
-          }  
+      
+      watch: {
+        livereload: {
+            options: {
+              livereload: true
+            },
+            files: [
+              'media/{,*/}*',
+              'lib/{,*/}*.js',
+              '{,*/}*.html',
+              '{,*/}*.css'
+            ]
         }
       },
-      open: {
-        all: {
-          path: "http://localhost:<%= express.all.options.port %>/index.html"
-        }
+
+      connect: {
+        options: {
+          port: 9000,
+          open: true,
+          livereload: 35729,
+          // Change this to '0.0.0.0' to access the server from outside
+          hostname: 'localhost'
+        },
+        livereload: true
+
       }
 
     });
 
     grunt.registerTask('live-serve', [
-      'express',
-      'open',
-      'express-keepalive'
+      'connect:livereload',
+      'watch',
     ]);
     grunt.registerTask('default', ['live-serve']);
 

@@ -26,6 +26,7 @@
     "async": "^0.9.0",
     "chalk": "~0.4.0",
     "cheerio": "^0.16.0",
+    "ncp": "^0.5.1",
     "request": "^2.36.0",
     "rimraf": "^2.2.8",
     "yeoman-generator": "~0.16.0",

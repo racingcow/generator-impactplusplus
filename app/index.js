@@ -9,26 +9,65 @@ var util = require('util'),
     cheerio = require('cheerio'),
     exec = require('child_process').exec,
     async = require('async'),
-    prefix = '\t  ',
     impactTempDir = '_impactjs',
     ppTempDir = '_plusplus',
+    licKeyPat = /(?:[A-z0-9]{4}-){3}[A-z0-9]{4}/,
+    impactKey,
+    impactSrc,
     self;
 
 fs.rm = require('rimraf');
-
-function directoryAsync (src, dest, cb) {
-  //console.log('directory ' + src);
-  self.directory(src, dest);
-  self.conflicter.resolve(cb);
-}
-
-function copyAsync(src, dest, cb) {
-  //console.log('copy ' + src);
-  self.directory(src, dest);
-  self.conflicter.resolve(cb);
-}
+fs.ncp = require('ncp').ncp;
 
 var ImpactplusplusGenerator = yeoman.generators.Base.extend({
+
+  _impactJSFromWeb: function(err, callback) {
+
+    var host = 'http://impactjs.com';
+
+    self.log('\tdownloading from ' + host);
+
+    req.post(host + '/download', { form: { key: this.impactKey } }, function(err1, resp1, body1) {
+      req.get(host + resp1.headers.location, function(err2, resp2, body2) {
+
+        if (fs.existsSync(self.impactSrc)) fs.rm.sync(self.impactSrc);
+
+        var $ = cheerio.load(body2),
+            gitCmd = $('[value^="git clone"]').val(),
+            destPath = self.impactSrc;
+
+        gitCmd += ' ' + destPath;
+
+        exec(gitCmd, function(err, stdout, stderr) {
+
+          self._impactJSFromPath(err, callback, true);
+
+        });
+      });
+    });
+
+  },
+
+  _impactJSFromPath: function(err, callback, rm) {
+
+    var src = self.impactSrc,
+        dest = self.destinationRoot();
+
+    fs.ncp(src, dest, function(err) {
+
+      if (err) {
+        callback(err);
+        return;
+      }
+      else if (rm) {
+        fs.rm(src, callback);
+      }
+      else {
+        callback();
+      }
+
+    });
+  },
 
   init: function () {
 
@@ -73,8 +112,9 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       default: 'someuser'
     },{
       type: 'input',
-      name: 'impactKey',
-      message: 'What is your impactjs license key?'
+      name: 'impactInfo',
+      message: 'Impactjs location? (or license key to download)',
+      default: '../impact'
     },{
       type: 'list',
       name: 'sample',
@@ -88,8 +128,16 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       this.name = props.name;
       this.desc = props.desc;
       this.user = props.user;
-      this.impactKey = props.impactKey;
       this.sample = props.sample;
+
+      if (licKeyPat.test(props.impactInfo)) {
+        this.impactKey = props.impactInfo;
+        this.impactSrc = impactTempDir;
+      } 
+      else {
+        this.impactKey = null;
+        this.impactSrc = props.impactInfo;
+      }
 
       done();
     }.bind(this));
@@ -97,76 +145,64 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
 
   impactjs: function() {
 
-    this.log('downloading impactjs...');
+    this.log('impactjs...');
 
     var done = this.async(),
-        host = 'http://impactjs.com';
+        method = this.impactKey 
+          ? this._impactJSFromWeb 
+          : this._impactJSFromPath;
 
-    req.post(host + '/download', {form: {key: this.impactKey}}, function(err1, resp1, body1) {
-      req.get(host + resp1.headers.location, function(err2, resp2, body2) {
-
-        if (fs.existsSync(impactTempDir)) fs.rm.sync(impactTempDir);
-
-        var $ = cheerio.load(body2),
-            gitCmd = $('[value^="git clone"]').val(),
-            srcPath = self.destinationRoot() + '/' + impactTempDir;
-
-        gitCmd += ' ' + srcPath;
-
-        exec(gitCmd, function(err, stdout, stderr) {
-
-          async.series([
-            function(cb) { directoryAsync(srcPath + '/lib', self.destinationRoot() + '/lib', cb); },
-            function(cb) { directoryAsync(srcPath + '/media', self.destinationRoot() + '/media', cb); },
-            function(cb) { directoryAsync(srcPath + '/tools', self.destinationRoot() + '/tools', cb); },
-            function(cb) { copyAsync(srcPath + '/weltmeister.html', self.destinationRoot() + '/weltmeister.html', cb); }
-          ], 
-          function(err) {
-            console.log('async done');
-            fs.rm(impactTempDir, done);
-          });
-
-        });
-      });
-    });
+    method.call(this, null, done);
 
   },
 
   blank: function() {
 
-    this.log('copying base files');
+    this.log('"base" files...');
 
-    self.directory('lib', 'lib');
-    self.copy('style.css', 'style.css');
-    self.template('_index.html','index.html');
+    var src  = this.sourceRoot(),
+        dest = this.destinationRoot(),
+        done = this.async(),
+        cpy = function(item, cb) {
+          fs.ncp(src + '/' + item, dest + '/' + item, cb);
+        };
+
+    async.parallel([
+      function(cb) { cpy('lib', cb); },
+      function(cb) { cpy('style.css', cb); },
+      function(cb) { cpy('index.html', cb); },
+    ],
+    done);
+
   },
 
   plusplus: function() {
 
-    this.log('download impact++');
-
-    var gitCmd = 'git clone -b dev https://github.com/collinhover/impactplusplus.git ' + ppTempDir,
+    var gitRepo = 'https://github.com/collinhover/impactplusplus.git',
+        gitCmd = 'git clone -b dev ' + gitRepo + ' ' + ppTempDir,
         src = self.destinationRoot() + '/' + ppTempDir + '/lib',
         dest = self.destinationRoot() + '/lib',
         exSrc = self.destinationRoot() + '/' + ppTempDir + '/examples',
         exDest = self.destinationRoot(),
         done = this.async();
 
-    if (fs.existsSync(ppTempDir)) fs.rm.sync(ppTempDir);
+    this.log('impactplusplus...');
+    this.log('\tdownloading from ' + gitRepo);
 
-    exec(gitCmd, function(err, stdout, stderr) {
-      directoryAsync(src, dest, function() {
+    async.series([
+      function(cb) { exec(gitCmd, cb) },
+      function(cb) { fs.ncp(src, dest, cb) },
+      function(cb) {
         if (self.sample != 'blank') {
-          self.log('copying sample "' + self.sample + '"');
-          self.log(exSrc + '/' + self.sample + ' to ' + exDest);
-          directoryAsync(exSrc + '/' + self.sample, exDest, function() {
-            fs.rm(ppTempDir, done);
-          });
+          self.log('\tcopying sample "' + self.sample + '"');
+          fs.ncp(exSrc + '/' + self.sample, exDest, cb);
         }
-        else {
-          fs.rm(ppTempDir, done);
-        }
-      });
+        else cb();
+      }
+    ],
+    function(err) {
+      if (err) return done(err);
+      fs.rm(ppTempDir, done);
     });
     
   },
@@ -182,13 +218,6 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
     self.copy('jshintrc', '.jshintrc');
 
   }
-
-  // makeFolders: function() {
-  //   self.mkdir('lib/game/levels');
-  //   self.mkdir('lib/impact');
-  //   self.mkdir('lib/weltmeister');
-  //   self.mkdir('media');
-  // },
 
 });
 

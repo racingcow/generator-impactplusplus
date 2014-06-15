@@ -81,8 +81,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       if (!this.options['skip-install']) {
         this.installDependencies({
           callback: function() {
-            self.log('Finished. Now you can...');
-            self.log('* run "grunt" to start a web server to run the game.');
+            self.log(yosay('Run "grunt" to start the game in a livereload web server.'));
           }
         });
       }

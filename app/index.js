@@ -5,6 +5,7 @@ var util = require('util'),
     yosay = require('yosay'),
     chalk = require('chalk'),
     fs = require('fs'),
+    path = require('path'),
     req = require('request'),
     cheerio = require('cheerio'),
     exec = require('child_process').exec,
@@ -99,7 +100,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       type: 'input',
       name: 'name',
       message: 'What would you like to call your game?',
-      default: 'my-awesome-game'
+      default: path.basename(this.destinationRoot())
     },{
       type: 'input',
       name: 'desc',

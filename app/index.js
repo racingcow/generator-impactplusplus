@@ -1,4 +1,5 @@
 'use strict';
+
 var util = require('util'),
     path = require('path'),
     yeoman = require('yeoman-generator'),
@@ -6,69 +7,16 @@ var util = require('util'),
     chalk = require('chalk'),
     fs = require('fs'),
     path = require('path'),
-    req = require('request'),
-    cheerio = require('cheerio'),
     exec = require('child_process').exec,
     async = require('async'),
     impactTempDir = '_impactjs',
     ppTempDir = '_plusplus',
-    licKeyPat = /(?:[A-z0-9]{4}-){3}[A-z0-9]{4}/,
-    impactKey,
-    impactSrc,
     self;
 
 fs.rm = require('rimraf');
 fs.ncp = require('ncp').ncp;
 
 var ImpactplusplusGenerator = yeoman.generators.Base.extend({
-
-  _impactJSFromWeb: function(err, callback) {
-
-    var host = 'http://impactjs.com';
-
-    self.log('\tdownloading from ' + host);
-
-    req.post(host + '/download', { form: { key: this.impactKey } }, function(err1, resp1, body1) {
-      req.get(host + resp1.headers.location, function(err2, resp2, body2) {
-
-        if (fs.existsSync(self.impactSrc)) fs.rm.sync(self.impactSrc);
-
-        var $ = cheerio.load(body2),
-            gitCmd = $('[value^="git clone"]').val(),
-            destPath = self.impactSrc;
-
-        gitCmd += ' ' + destPath;
-
-        exec(gitCmd, function(err, stdout, stderr) {
-
-          self._impactJSFromPath(err, callback, true);
-
-        });
-      });
-    });
-
-  },
-
-  _impactJSFromPath: function(err, callback, rm) {
-
-    var src = self.impactSrc,
-        dest = self.destinationRoot();
-
-    fs.ncp(src, dest, function(err) {
-
-      if (err) {
-        callback(err);
-        return;
-      }
-      else if (rm) {
-        fs.rm(src, callback);
-      }
-      else {
-        callback();
-      }
-
-    });
-  },
 
   init: function () {
 
@@ -129,15 +77,7 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
       this.desc = props.desc;
       this.user = props.user;
       this.sample = props.sample;
-
-      if (licKeyPat.test(props.impactInfo)) {
-        this.impactKey = props.impactInfo;
-        this.impactSrc = impactTempDir;
-      } 
-      else {
-        this.impactKey = null;
-        this.impactSrc = props.impactInfo;
-      }
+      this.impactInfo = props.impactInfo;
 
       done();
     }.bind(this));
@@ -147,13 +87,8 @@ var ImpactplusplusGenerator = yeoman.generators.Base.extend({
 
     this.log('impactjs...');
 
-    var done = this.async(),
-        method = this.impactKey 
-          ? this._impactJSFromWeb 
-          : this._impactJSFromPath;
-
-    method.call(this, null, done);
-
+    var done = this.async()
+    this.invoke('impactplusplus:update-impactjs', { args: [ this.impactInfo ] }, done);
   },
 
   blank: function() {

@@ -20,6 +20,35 @@ run the generator to build a quick impact++ scaffold
 $ yo impactplusplus
 ```
 
+## Documentation
+**generator-impactplusplus** supports these other commands too!
+
+### update-impactjs
+Update to the latest version of ImpactJS, or install ImpactJS if it is not already installed.
+
+```bash
+$ yo impactplusplus:update-impactjs "MY-LICENSE-KEY"
+```
+to download the latest version of ImpactJS
+
+**or**
+
+```bash
+$ yo impactplusplus:update-impactjs "../path/to/impactjs"
+```
+to copy ImpactJS from another local directory 
+
+## Version History
+
+### 0.0.2
+ - Move download/copy of impactjs to subgenerator
+
+### 0.0.1
+- Generate empty game
+- Generate impact++ sample game (jumpnrun or supercollider)
+- Download or copy of impactjs version
+- Download latest impact++ version
+
 ## License
 
 MIT

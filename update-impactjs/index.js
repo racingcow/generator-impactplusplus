@@ -49,29 +49,37 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
   _impactJSFromPath: function(err, impactSrc, callback, rm) {
 
     var src = impactSrc,
-        dest = path.join(this.destinationRoot(), '/lib/impact');
+        dest = path.join(this.destinationRoot(), '/lib/impact'),
+        adjSrc;
 
     fs.exists(dest, function(exists) {
 
       if (exists) fs.rm.sync(dest);
 
       mkdirp(dest, function(err) {
-        fs.ncp(src, dest, function(err) {
 
-          if (err) {
-            callback(err);
-            return;
-          }
-          else if (rm) {
-            fs.rm(src, callback);
-          }
-          else {
-            callback();
-          }
+        fs.exists(src + '/lib/impact', function(exists) { //accept the path of a full game or just the /lib/impact folder
+
+            adjSrc = exists ? src + '/lib/impact' : src;
+
+            fs.ncp(adjSrc, dest, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              else if (rm) {
+                fs.rm(src, callback);
+              }
+              else {
+                callback();
+              }
+            });
+
         });
-      });
 
+      });
     });
+
   },
 
   init: function () {

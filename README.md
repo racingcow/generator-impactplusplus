@@ -40,6 +40,9 @@ to copy ImpactJS from another local directory
 
 ## Version History
 
+### 0.0.5
+ - Fix for [#2 - Entering ImpactJS key not working](https://github.com/racingcow/generator-impactplusplus/issues/2)
+
 ### 0.0.4
  - Fix for [#1 - Generator "loops" when calling update-impactjs subgenerator](https://github.com/racingcow/generator-impactplusplus/issues/1)
 

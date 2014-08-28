@@ -1,6 +1,6 @@
 {
   "name": "generator-impactplusplus",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Yeoman generator that scaffolds out an impactplusplus game",
   "license": "MIT",
   "main": "app/index.js",
@@ -17,7 +17,8 @@
     "test": "mocha"
   },
   "files": [
-    "app"
+    "app",
+    "update-impactjs"
   ],
   "keywords": [
     "yeoman-generator"

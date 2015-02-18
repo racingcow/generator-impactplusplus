@@ -18,16 +18,19 @@ fs.rm = require('rimraf');
 
 var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
 
-  _impactJSFromWeb: function(err, impactKey, impactSrc, callback) {
+  _impactJSFromWeb: function(impactKey, impactSrc, callback) {
 
     var host = 'http://impactjs.com',
         self = this;
 
     self.log('\tdownloading from ' + host);
 
-    req.post(host + '/download', { form: { key: impactKey } }, function(err1, resp1, body1) {
-      req.get(host + resp1.headers.location, function(err2, resp2, body2) {
-
+    req.post(host + '/download', { form: { key: impactKey } }, function(err, resp1, body1) {
+      if (err) return callback(err);
+      
+      req.get(host + resp1.headers.location, function(err, resp2, body2) {
+        if (err) return callback(err);
+        
         if (fs.existsSync(impactSrc)) fs.rm.sync(impactSrc);
 
         var $ = cheerio.load(body2),
@@ -37,8 +40,9 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
         gitCmd += ' ' + destPath;
 
         exec(gitCmd, function(err, stdout, stderr) {
+          if (err) return callback(err);
 
-          self._impactJSFromPath(err, impactSrc, callback, true);
+          self._impactJSFromPath(impactSrc, callback, true);
 
         });
       });
@@ -46,7 +50,7 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
 
   },
 
-  _impactJSFromPath: function(err, impactSrc, callback, rm) {
+  _impactJSFromPath: function(impactSrc, callback, rm) {
 
     var src = impactSrc,
         dest = path.join(this.destinationRoot(), '/lib/impact'),
@@ -57,17 +61,16 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
       if (exists) fs.rm.sync(dest);
 
       mkdirp(dest, function(err) {
+        if (err) return callback(err);
 
         fs.exists(src + '/lib/impact', function(exists) { //accept the path of a full game or just the /lib/impact folder
 
             adjSrc = exists ? src + '/lib/impact' : src;
 
             fs.ncp(adjSrc, dest, function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
-              else if (rm) {
+              if (err) return callback(err);
+              
+              if (rm) {
                 fs.rm(src, callback);
               }
               else {
@@ -92,10 +95,10 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
     }
 
     if (licKeyPat.test(impactInfo)) {
-      this._impactJSFromWeb(null, impactInfo, defaultImpactInfo, done);
+      this._impactJSFromWeb(impactInfo, defaultImpactInfo, done);
     } 
     else {
-      this._impactJSFromPath(null, impactInfo, done);
+      this._impactJSFromPath(impactInfo, done);
     }
 
   },

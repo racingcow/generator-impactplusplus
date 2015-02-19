@@ -52,29 +52,54 @@ var UpdateImpactjsGenerator = yeoman.generators.NamedBase.extend({
 
   _impactJSFromPath: function(impactSrc, callback, rm) {
 
-    var src = impactSrc,
+    var self = this,
+        src = impactSrc,
         dest = path.join(this.destinationRoot(), '/lib/impact'),
         adjSrc;
 
+    self.log('src = "' + src + '"');
+    self.log('destinationRoot = "' + this.destinationRoot() + '"');
+    self.log('dest = "' + dest + '"');
+
     fs.exists(dest, function(exists) {
 
-      if (exists) fs.rm.sync(dest);
+      if (exists) {
+        self.log('dest exists. Deleting...');
+        fs.rm.sync(dest);
+        self.log('dest deleted');
+      }
 
+      self.log('creating dest');
       mkdirp(dest, function(err) {
-        if (err) return callback(err);
+        
+        if (err) {
+          self.log('error with mkdirp');
+          self.log(err);
+          return callback(err);
+        }
 
+        self.log('checking if "' + src + '/lib/impact" exists.');
         fs.exists(src + '/lib/impact', function(exists) { //accept the path of a full game or just the /lib/impact folder
 
+            self.log('exists = ' + exists);
             adjSrc = exists ? src + '/lib/impact' : src;
+            self.log('adjSrc = ' + adjSrc);
 
             fs.ncp(adjSrc, dest, function(err) {
-              if (err) return callback(err);
+              if (err) {
+                self.log('error with ncp');
+                self.log(err);
+                return callback(err);
+              }
               
               if (rm) {
+                self.log('rm "' + src + '"');
                 fs.rm(src, callback);
+                self.log('finished rm');
               }
               else {
                 callback();
+                self.log('finished');
               }
             });
 
